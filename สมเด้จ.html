@@ -1,0 +1,475 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Recognition</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 25px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            border-radius: 25px;
+            padding: 35px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .icon {
+            font-size: 55px;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 27px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .upload-box {
+            border: 2px dashed #8b7cf6;
+            border-radius: 20px;
+            padding: 30px 15px;
+            background: #f8f7ff;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .upload-box:hover {
+            background: #efedff;
+            border-color: #6548db;
+            transform: translateY(-3px);
+        }
+
+        .upload-icon {
+            font-size: 45px;
+            margin-bottom: 12px;
+        }
+
+        .upload-box h3 {
+            color: #5d4bc2;
+            margin-bottom: 8px;
+        }
+
+        .upload-box p {
+            color: #999;
+            font-size: 13px;
+        }
+
+        #imageInput {
+            display: none;
+        }
+
+        .preview-area {
+            margin-top: 25px;
+            display: none;
+        }
+
+        #preview {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 15px;
+            background: #f3f3f3;
+            padding: 5px;
+        }
+
+        button {
+            border: none;
+            border-radius: 12px;
+            padding: 14px 25px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .predict-btn {
+            width: 100%;
+            margin-top: 20px;
+            color: white;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .reset-btn {
+            margin-top: 12px;
+            background: #f0efff;
+            color: #6854d8;
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .result-title {
+            text-align: center;
+            font-size: 21px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .top-result {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 22px;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .top-result small {
+            opacity: 0.85;
+        }
+
+        .top-result h2 {
+            margin: 10px 0;
+            font-size: 25px;
+        }
+
+        .top-result .percent {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .prediction-item {
+            margin-bottom: 17px;
+        }
+
+        .prediction-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-bottom: 7px;
+            color: #444;
+        }
+
+        .progress {
+            height: 11px;
+            border-radius: 20px;
+            background: #eee;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            border-radius: 20px;
+            background: linear-gradient(90deg, #667eea, #a56bdf);
+            transition: width 0.8s ease;
+        }
+
+        .loading {
+            display: none;
+            color: #7657d5;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 30px;
+            color: #aaa;
+            font-size: 12px;
+        }
+
+        @media(max-width: 480px) {
+            .container {
+                padding: 23px 18px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="icon">🤖</div>
+
+    <h1>AI Image Recognition</h1>
+
+    <p class="subtitle">
+        ระบบจำแนกประเภทภาพด้วย Artificial Intelligence
+    </p>
+
+    <!-- Upload -->
+    <label class="upload-box" for="imageInput">
+        <div class="upload-icon">📁</div>
+        <h3>อัปโหลดรูปภาพ</h3>
+        <p>คลิกเพื่อเลือกรูปภาพจากอุปกรณ์ของคุณ</p>
+        <p>รองรับไฟล์ JPG, PNG, WEBP</p>
+    </label>
+
+    <input
+        type="file"
+        id="imageInput"
+        accept="image/*"
+    >
+
+    <!-- Image Preview -->
+    <div class="preview-area" id="previewArea">
+
+        <img id="preview" alt="Image Preview">
+
+        <button
+            class="predict-btn"
+            id="predictBtn"
+            onclick="predictImage()"
+        >
+            🔍 วิเคราะห์รูปภาพ
+        </button>
+
+        <button
+            class="reset-btn"
+            onclick="resetAll()"
+        >
+            ↻ เลือกรูปภาพใหม่
+        </button>
+
+    </div>
+
+    <div class="loading" id="loading">
+        ⏳ กำลังประมวลผลด้วย AI...
+    </div>
+
+    <!-- Results -->
+    <div class="result-section" id="resultSection">
+
+        <h2 class="result-title">✨ ผลการวิเคราะห์</h2>
+
+        <div class="top-result">
+            <small>ผลลัพธ์ที่มีความมั่นใจสูงสุด</small>
+            <h2 id="topClass">-</h2>
+            <div class="percent" id="topPercent">0%</div>
+        </div>
+
+        <h3 style="margin-bottom:15px;color:#444;">
+            ผลการจำแนกทั้งหมด
+        </h3>
+
+        <div id="labelContainer"></div>
+
+    </div>
+
+    <div class="footer">
+        Powered by Teachable Machine & TensorFlow.js
+    </div>
+
+</div>
+
+<script>
+
+    // Teachable Machine Model URL
+    const URL = "https://teachablemachine.withgoogle.com/models/Xw0-CyWYm/";
+
+    let model;
+    let selectedImage = null;
+
+    // Load AI Model
+    async function loadModel() {
+        try {
+            model = await tmImage.load(
+                URL + "model.json",
+                URL + "metadata.json"
+            );
+
+            console.log("AI Model Loaded Successfully");
+
+        } catch (error) {
+            console.error(error);
+            alert("ไม่สามารถโหลด AI Model ได้ กรุณาตรวจสอบอินเทอร์เน็ต");
+        }
+    }
+
+    // Load model when page opens
+    loadModel();
+
+    // Upload Image
+    document.getElementById("imageInput").addEventListener("change", function(event) {
+
+        const file = event.target.files[0];
+
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            alert("กรุณาเลือกไฟล์รูปภาพเท่านั้น");
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+
+            const img = document.getElementById("preview");
+
+            img.onload = function() {
+                selectedImage = img;
+
+                document.getElementById("previewArea").style.display = "block";
+                document.getElementById("resultSection").style.display = "none";
+
+            };
+
+            img.src = e.target.result;
+        };
+
+        reader.readAsDataURL(file);
+
+    });
+
+    // Predict Image
+    async function predictImage() {
+
+        if (!selectedImage) {
+            alert("กรุณาอัปโหลดรูปภาพก่อน");
+            return;
+        }
+
+        if (!model) {
+            alert("AI กำลังโหลด กรุณารอสักครู่");
+            return;
+        }
+
+        const btn = document.getElementById("predictBtn");
+
+        btn.disabled = true;
+
+        document.getElementById("loading").style.display = "block";
+        document.getElementById("resultSection").style.display = "none";
+
+        try {
+
+            const prediction = await model.predict(selectedImage);
+
+            // Sort highest probability first
+            prediction.sort((a, b) => b.probability - a.probability);
+
+            const best = prediction[0];
+
+            // Show top result
+            document.getElementById("topClass").textContent = best.className;
+
+            document.getElementById("topPercent").textContent =
+                (best.probability * 100).toFixed(2) + "%";
+
+            // Show all predictions
+            const labelContainer = document.getElementById("labelContainer");
+
+            labelContainer.innerHTML = "";
+
+            prediction.forEach(item => {
+
+                const percent = (item.probability * 100).toFixed(2);
+
+                const div = document.createElement("div");
+
+                div.className = "prediction-item";
+
+                const info = document.createElement("div");
+                info.className = "prediction-info";
+
+                const name = document.createElement("span");
+                name.textContent = item.className;
+
+                const score = document.createElement("strong");
+                score.textContent = percent + "%";
+
+                info.appendChild(name);
+                info.appendChild(score);
+
+                const progress = document.createElement("div");
+                progress.className = "progress";
+
+                const bar = document.createElement("div");
+                bar.className = "progress-bar";
+                bar.style.width = percent + "%";
+
+                progress.appendChild(bar);
+
+                div.appendChild(info);
+                div.appendChild(progress);
+
+                labelContainer.appendChild(div);
+
+            });
+
+            document.getElementById("resultSection").style.display = "block";
+
+        } catch (error) {
+
+            console.error(error);
+            alert("เกิดข้อผิดพลาดในการวิเคราะห์รูปภาพ");
+
+        } finally {
+
+            document.getElementById("loading").style.display = "none";
+            btn.disabled = false;
+
+        }
+
+    }
+
+    // Reset
+    function resetAll() {
+
+        document.getElementById("imageInput").value = "";
+
+        document.getElementById("preview").src = "";
+
+        document.getElementById("previewArea").style.display = "none";
+
+        document.getElementById("resultSection").style.display = "none";
+
+        document.getElementById("labelContainer").innerHTML = "";
+
+        selectedImage = null;
+
+    }
+
+</script>
+
+</body>
+</html>
